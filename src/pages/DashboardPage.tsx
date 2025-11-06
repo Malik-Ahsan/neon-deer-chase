@@ -73,7 +73,7 @@ const DashboardPage = () => {
               <div className="mt-6 flex items-center justify-center gap-3">
                 <span className="text-lg text-muted-foreground">Your current plan:</span>
                 <Badge className="text-lg py-2 px-4 font-semibold bg-secondary text-secondary-foreground shadow-sm">
-                  {user.subscriptionTier.toUpperCase()}
+                  {(user.subscriptionTier || 'free').toUpperCase()}
                 </Badge>
               </div>
             )}

@@ -7,21 +7,25 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
+import { register } from "@/services/authService";
 import Navbar from "@/components/Navbar";
 import { UserPlus } from "lucide-react";
 
 const RegisterPage = () => {
   const [username, setUsername] = useState<string>("");
-  const { register } = useAuth();
+  const [email, setEmail] = useState<string>("");
+  const [password, setPassword] = useState<string>("");
+  const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (username.trim()) {
-      const success = register(username.trim());
-      if (success) {
-        navigate("/"); // Redirect to home or dashboard after registration
-      }
+    try {
+      await register({ username, email, password });
+      await login({ username, password });
+      navigate("/");
+    } catch (error) {
+      console.error("Registration failed", error);
     }
   };
 
@@ -46,6 +50,30 @@ const RegisterPage = () => {
                   placeholder="choose_a_username"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
+                  required
+                  className="h-10 text-base"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-base">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="your_email@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="h-10 text-base"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password" className="text-base">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="choose_a_password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   required
                   className="h-10 text-base"
                 />

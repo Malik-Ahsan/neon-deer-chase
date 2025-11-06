@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import MasterResumePage from "./pages/MasterResumePage"; // Renamed from Index
 import DashboardPage from "./pages/DashboardPage"; // New Dashboard page
 import NotFound from "./pages/NotFound";
@@ -16,6 +16,7 @@ import CoachingPage from "./pages/CoachingPage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import ProtectedRoute from "./components/ProtectedRoute";
+import PublicRoute from "./components/PublicRoute";
 import { AuthProvider, useAuth } from "./context/AuthContext"; // Import useAuth
 
 const queryClient = new QueryClient();
@@ -23,7 +24,7 @@ const queryClient = new QueryClient();
 // A wrapper component to handle conditional routing for the root path
 const HomeRoute = () => {
   const { isAuthenticated } = useAuth();
-  return isAuthenticated ? <DashboardPage /> : <MasterResumePage />;
+  return isAuthenticated ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />;
 };
 
 const App = () => (
@@ -35,10 +36,11 @@ const App = () => (
         <AuthProvider> {/* Wrap the entire app with AuthProvider */}
           <Routes>
             <Route path="/" element={<HomeRoute />} /> {/* Conditional home route */}
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
+            <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
             
             {/* Protected Routes */}
+            <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
             <Route path="/master-resume" element={<ProtectedRoute><MasterResumePage /></ProtectedRoute>} /> {/* New route for MasterResumePage */}
             <Route path="/tagging" element={<ProtectedRoute><TaggingPage /></ProtectedRoute>} />
             <Route path="/job-description-input" element={<ProtectedRoute><JobDescriptionInputPage /></ProtectedRoute>} />

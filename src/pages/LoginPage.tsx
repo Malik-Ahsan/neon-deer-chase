@@ -12,14 +12,17 @@ import { LogIn } from "lucide-react";
 
 const LoginPage = () => {
   const [username, setUsername] = useState<string>("");
+  const [password, setPassword] = useState<string>("");
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (username.trim()) {
-      login(username.trim());
-      navigate("/"); // Redirect to home or dashboard after login
+    try {
+      await login({ username, password });
+      navigate("/");
+    } catch (error) {
+      console.error("Login failed", error);
     }
   };
 
@@ -44,6 +47,18 @@ const LoginPage = () => {
                   placeholder="yourusername"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
+                  required
+                  className="h-10 text-base"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password" className="text-base">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="your_password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   required
                   className="h-10 text-base"
                 />

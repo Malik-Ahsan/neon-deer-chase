@@ -68,7 +68,7 @@ const Navbar = () => {
                 <Button variant="ghost" className="relative h-9 w-9 rounded-full">
                   <Avatar className="h-9 w-9">
                     <AvatarFallback className="bg-primary-foreground text-primary">
-                      {user?.username.charAt(0).toUpperCase()}
+                      {user?.username ? user.username.charAt(0).toUpperCase() : ''}
                     </AvatarFallback>
                   </Avatar>
                 </Button>
