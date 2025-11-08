@@ -9,8 +9,17 @@ import { Label } from "@/components/ui/label";
 import { PlusCircle, XCircle, Tag, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
-import { mockExperienceEntries, ExperienceEntry } from "@/data/mockData";
-import Navbar from "@/components/Navbar"; // Added import
+import { getExperienceEntries, updateExperienceTags } from "@/services/resumeService";
+import Navbar from "@/components/Navbar";
+
+export interface ExperienceEntry {
+  id: string;
+  title: string;
+  company: string;
+  description: string;
+  functionalRoles: string[];
+  industryDomains: string[];
+}
 
 const TaggingSection = () => {
   const [experienceEntries, setExperienceEntries] = useState<ExperienceEntry[]>([]);
@@ -18,14 +27,23 @@ const TaggingSection = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const storedExperience = localStorage.getItem('processedExperience');
-    if (storedExperience) {
-      setExperienceEntries(JSON.parse(storedExperience));
-      toast.info("Loaded processed resume data for tagging.");
-    } else {
-      setExperienceEntries(mockExperienceEntries);
-      toast.info("Using mock experience data for tagging.");
-    }
+    const fetchExperienceEntries = async () => {
+      try {
+        const data = await getExperienceEntries();
+        const sanitizedData = data.map((entry: any) => ({
+          ...entry,
+          functionalRoles: entry.functionalRoles || [],
+          industryDomains: entry.industryDomains || [],
+        }));
+        setExperienceEntries(sanitizedData);
+        toast.success("Successfully loaded experience entries.");
+      } catch (error) {
+        console.error("Failed to fetch experience entries:", error);
+        toast.error("Failed to load experience entries. Please try again later.");
+      }
+    };
+
+    fetchExperienceEntries();
   }, []);
 
   const handleAddTag = (entryId: string, type: "functionalRoles" | "industryDomains") => {
@@ -56,11 +74,16 @@ const TaggingSection = () => {
     toast.info(`Tag "${tagToRemove}" removed.`);
   };
 
-  const handleSaveTags = () => {
-    localStorage.setItem('processedExperience', JSON.stringify(experienceEntries));
-    toast.success("Tags saved successfully! (Simulated)");
-    console.log("Saved Tags:", experienceEntries);
-    navigate("/job-description-input");
+  const handleSaveTags = async () => {
+    try {
+      await updateExperienceTags(experienceEntries);
+      toast.success("Tags saved successfully!");
+      console.log("Saved Tags:", experienceEntries);
+      navigate("/job-description-input");
+    } catch (error) {
+      console.error("Failed to save tags:", error);
+      toast.error("Failed to save tags. Please try again later.");
+    }
   };
 
   return (

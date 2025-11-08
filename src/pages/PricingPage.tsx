@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { Badge } from "@/components/ui/badge";
 import Navbar from "@/components/Navbar";
+import { upgradeSubscription } from "@/services/subscriptionService";
 
 const PricingSection = () => {
   const { user, upgradeTier } = useAuth();
@@ -76,7 +77,7 @@ const PricingSection = () => {
     },
   ];
 
-  const handleUpgradeClick = (tierId: 'free' | 'pro' | 'proplus') => {
+  const handleUpgradeClick = async (tierId: 'free' | 'pro' | 'proplus') => {
     if (!user) {
       toast.error("Please log in to manage your subscription.");
       return;
@@ -92,7 +93,13 @@ const PricingSection = () => {
       return;
     }
 
-    upgradeTier(tierId);
+    try {
+      await upgradeSubscription(tierId);
+      upgradeTier(tierId);
+    } catch (error) {
+      toast.error("Failed to upgrade subscription.");
+      console.error(error);
+    }
   };
 
   return (

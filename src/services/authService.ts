@@ -29,7 +29,8 @@ export const login = async (userData: any) => {
   }
   const data = await response.json();
   if (data.access_token) {
-    const user = { ...data.user, token: data.access_token, subscriptionTier: 'free' };
+    localStorage.setItem("access_token", data.access_token);
+    const user = { ...data.user, subscriptionTier: data.user.subscriptionTier || 'free' };
     localStorage.setItem("user", JSON.stringify(user));
   }
   return data;
@@ -37,12 +38,17 @@ export const login = async (userData: any) => {
 
 export const logout = () => {
   localStorage.removeItem("user");
+  localStorage.removeItem("access_token");
 };
 
 export const getCurrentUser = () => {
   const userStr = localStorage.getItem("user");
   if (userStr) return JSON.parse(userStr);
   return null;
+};
+
+export const getToken = () => {
+  return localStorage.getItem("access_token");
 };
 
 export const setCurrentUser = (user: any) => {

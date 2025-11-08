@@ -18,11 +18,8 @@ import AiEnhancementSection from "@/components/application-generator/AiEnhanceme
 import ResumePreview from "@/components/application-generator/ResumePreview";
 import CoverLetterPreview from "@/components/application-generator/CoverLetterPreview";
 
-import { mockResumeContent, mockCoverLetterContent } from "@/utils/materialGenerators";
-
+import { generateResumeVersion } from "@/services/resumeService";
 import {
-  mockExperienceEntries,
-  mockJobDescriptionInfo,
   mockTemplates,
   mockAiSuggestions,
   ExperienceEntry,
@@ -38,9 +35,7 @@ const ApplicationMaterialGenerator = () => {
   const [customJobQuestions, setCustomJobQuestions] = useState<string>("");
   const [aiSuggestions, setAiSuggestions] = useState<string[]>(mockAiSuggestions.map(s => s.description));
   const [appliedSuggestions, setAppliedSuggestions] = useState<string[]>([]);
-
-  const [experienceEntries, setExperienceEntries] = useState<ExperienceEntry[]>([]);
-  const [jobDescriptionInfo, setJobDescriptionInfo] = useState<JobDescriptionInfo>({ roles: [], domains: [], keywords: [] });
+  const [jobDescription, setJobDescription] = useState<string>("");
 
   const navigate = useNavigate();
   const { user, canGenerateResume, recordResumeGeneration } = useAuth();
@@ -48,25 +43,11 @@ const ApplicationMaterialGenerator = () => {
   const isProPlus = user?.subscriptionTier === 'proplus';
 
   useEffect(() => {
-    const storedExperience = localStorage.getItem('processedExperience');
-    if (storedExperience) {
-      setExperienceEntries(JSON.parse(storedExperience));
-    } else {
-      setExperienceEntries(mockExperienceEntries);
-    }
-
-    const storedJobDescriptionInfo = localStorage.getItem('jobDescriptionInfo');
-    if (storedJobDescriptionInfo) {
-      setJobDescriptionInfo(JSON.parse(storedJobDescriptionInfo));
-    } else {
-      setJobDescriptionInfo(mockJobDescriptionInfo);
+    const storedJobDescription = localStorage.getItem("jobDescription");
+    if (storedJobDescription) {
+      setJobDescription(storedJobDescription);
     }
   }, []);
-
-  useEffect(() => {
-    setResumeContent(mockResumeContent(selectedTemplate, experienceEntries, jobDescriptionInfo, appliedSuggestions));
-    setCoverLetterContent(mockCoverLetterContent(coverLetterLength, customJobQuestions, jobDescriptionInfo, experienceEntries));
-  }, [selectedTemplate, coverLetterLength, customJobQuestions, appliedSuggestions, experienceEntries, jobDescriptionInfo]);
 
   const handleDownload = async () => {
     if (!versionName.trim()) {
@@ -163,7 +144,7 @@ const ApplicationMaterialGenerator = () => {
     }
   };
 
-  const handleSaveAndContinue = () => {
+  const handleSaveAndContinue = async () => {
     if (!versionName.trim()) {
       toast.error("Please name your application version before continuing.");
       return;
@@ -174,27 +155,17 @@ const ApplicationMaterialGenerator = () => {
       return;
     }
 
-    const newVersion = {
-      id: crypto.randomUUID(),
-      name: versionName.trim(),
-      createdAt: new Date().toLocaleString(),
-      lastModified: new Date().toLocaleString(),
-      masterLastSynced: new Date().toLocaleString(),
-      contentHash: Math.random().toFixed(4),
-      templateUsed: selectedTemplate,
-      simulatedResumeContent: resumeContent,
-      simulatedCoverLetterContent: coverLetterContent,
-    };
-
-    const storedVersions = localStorage.getItem("resumePivotVersions");
-    const versions = storedVersions ? JSON.parse(storedVersions) : [];
-    versions.push(newVersion);
-    localStorage.setItem("resumePivotVersions", JSON.stringify(versions));
-
-    toast.success(`Application version "${versionName}" saved!`);
-    console.log("Saved version:", newVersion);
-    recordResumeGeneration();
-    navigate("/version-management");
+    try {
+      const newVersion = await generateResumeVersion(jobDescription, versionName.trim());
+      setResumeContent(newVersion.resume_content);
+      setCoverLetterContent(newVersion.cover_letter_content);
+      toast.success(`Application version "${versionName}" saved!`);
+      recordResumeGeneration();
+      navigate("/version-management");
+    } catch (error) {
+      toast.error("Failed to save application version.");
+      console.error("Failed to save version:", error);
+    }
   };
 
   return (

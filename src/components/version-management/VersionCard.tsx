@@ -25,8 +25,9 @@ interface ApplicationVersion {
   contentHash: string;
   templateUsed: string;
   hasUnsyncedChanges?: boolean;
-  simulatedResumeContent: string;
-  simulatedCoverLetterContent: string;
+  content: {
+    raw: string;
+  };
 }
 
 interface VersionCardProps {

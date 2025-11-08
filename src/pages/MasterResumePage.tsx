@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/context/AuthContext";
+import { uploadMasterResume, saveMasterResume, getMasterResume } from "@/services/resumeService";
 import {
   Dialog,
   DialogContent,
@@ -28,6 +29,7 @@ const MasterResumePage = () => {
   const [masterResumeSummary, setMasterResumeSummary] = useState<string | null>(null);
   const [processedExperience, setProcessedExperience] = useState<ExperienceEntry[]>([]);
   const [showMasterResumeDetails, setShowMasterResumeDetails] = useState<boolean>(false);
+  const [isResumeProcessed, setIsResumeProcessed] = useState<boolean>(false);
   const [manualResumeText, setManualResumeText] = useState<string>("");
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -35,14 +37,25 @@ const MasterResumePage = () => {
 
   useEffect(() => {
     const storedExperience = localStorage.getItem('processedExperience');
-    if (storedExperience) {
-      const parsedExperience: ExperienceEntry[] = JSON.parse(storedExperience);
-      if (parsedExperience.length > 0) {
-        setProcessedExperience(parsedExperience);
-        const summary = parsedExperience.map(entry => `- **${entry.title}** at ${entry.company}`).join('\n');
-        setMasterResumeSummary(`**Existing Master Resume Loaded:**\n${summary}\n\n(Details available via "View Master Resume Details")`);
-        setManualResumeText(parsedExperience.map(entry => `${entry.title} at ${entry.company}: ${entry.description}`).join('\n\n'));
-        toast.info("Existing master resume loaded from your profile.");
+    if (storedExperience && storedExperience !== 'undefined') {
+      try {
+        const parsedExperience: ExperienceEntry[] = JSON.parse(storedExperience);
+        if (parsedExperience.length > 0) {
+          setProcessedExperience(parsedExperience);
+          const summary = parsedExperience.map(entry => `- **${entry.title}** at ${entry.company}`).join('\n');
+          setMasterResumeSummary(`**Existing Master Resume Loaded:**\n${summary}\n\n(Details available via "View Master Resume Details")`);
+          setManualResumeText(parsedExperience.map(entry => `${entry.title} at ${entry.company}: ${entry.description}`).join('\n\n'));
+          toast.info("Existing master resume loaded from your profile.");
+        }
+      } catch (error) {
+        console.error("Failed to parse stored experience:", error);
+        localStorage.removeItem('processedExperience'); // Clear corrupted data
+        // Fallback to mock data
+        setProcessedExperience(mockExperienceEntries);
+        const summary = mockExperienceEntries.map(entry => `- **${entry.title}** at ${entry.company}`).join('\n');
+        setMasterResumeSummary(`**Mock Master Resume Loaded:**\n${summary}\n\n(Details available via "View Master Resume Details")`);
+        setManualResumeText(mockExperienceEntries.map(entry => `${entry.title} at ${entry.company}: ${entry.description}`).join('\n\n'));
+        toast.error("Failed to load existing resume. Loaded mock data instead.");
       }
     } else {
       setProcessedExperience(mockExperienceEntries);
@@ -172,9 +185,16 @@ const MasterResumePage = () => {
       if (isNewEntryStart) {
         const parts = trimmedLine.split(/ (at|@) /);
         if (parts.length >= 3) {
-          currentEntry.title = parts[0].trim();
-          currentEntry.company = parts[2].split(':')[0].trim();
-          currentDescriptionLines.push(parts[2].split(':').slice(1).join(':').trim());
+          if (parts[0]) {
+            currentEntry.title = parts[0].trim();
+          }
+          const companyAndDesc = parts.slice(2).join(' at ').split(':');
+          if (companyAndDesc[0]) {
+            currentEntry.company = companyAndDesc[0].trim();
+          }
+          if (companyAndDesc.length > 1) {
+            currentDescriptionLines.push(companyAndDesc.slice(1).join(':').trim());
+          }
         } else if (trimmedLine.includes(':')) {
           const [titlePart, descPart] = trimmedLine.split(':', 2);
           currentEntry.title = titlePart.trim();
@@ -204,55 +224,76 @@ const MasterResumePage = () => {
     return newEntries;
   };
 
-  const handleProcessResume = () => {
-    if (fileName) {
+  const handleProcessResume = async () => {
+    const fileInput = document.getElementById('master-resume-upload') as HTMLInputElement;
+    const file = fileInput?.files?.[0];
+
+    if (file && user) {
       setIsProcessing(true);
-      toast.info("Processing resume from file... This may take a moment. (Simulated)");
-      setTimeout(() => {
-        const mockProcessedExperience: ExperienceEntry[] = mockExperienceEntries;
-        setProcessedExperience(mockProcessedExperience);
-        localStorage.setItem('processedExperience', JSON.stringify(mockProcessedExperience));
+      toast.info("Uploading and processing resume...");
+      try {
+        const response = await uploadMasterResume(file);
+        const experience = response.content.experience || [];
+        setProcessedExperience(experience);
+        localStorage.setItem('processedExperience', JSON.stringify(experience));
 
-        const summary = mockProcessedExperience.map(entry => `- **${entry.title}** at ${entry.company}`).join('\n');
-        setMasterResumeSummary(`**Master Resume Processed from File:**\n${summary}\n\n(Details available via "View Master Resume Details")`);
-        setManualResumeText(mockProcessedExperience.map(entry => `${entry.title} at ${entry.company}: ${entry.description}`).join('\n\n'));
+        if (response.content && response.content.raw) {
+          setManualResumeText(response.content.raw);
+        }
 
+        if (experience.length > 0) {
+          setMasterResumeSummary(`**Master Resume Processed:**\nFound ${experience.length} experience entries.`);
+        } else {
+          setMasterResumeSummary("**Master Resume Processed:**\nNo experience entries were found.");
+        }
+        
+        toast.success("Resume successfully uploaded and processed!");
+        setIsResumeProcessed(true);
+      } catch (error) {
+        toast.error("Failed to upload resume. Please try again.");
+      } finally {
         setIsProcessing(false);
-        toast.success("Resume processed and structured from file! Review the summary below.");
-      }, 3000);
+      }
     } else {
-      toast.error("Please upload a resume file or enter text manually.");
+      if (!file) {
+        toast.error("Please select a file to upload.");
+      } else if (!user) {
+        toast.error("You must be logged in to upload a resume.");
+      }
     }
   };
 
-  const handleSaveManualResume = () => {
+  const handleSaveManualResume = async () => {
     if (manualResumeText.trim().length === 0) {
       toast.error("Please enter some text for your master resume.");
       return;
     }
 
     setIsProcessing(true);
-    toast.info("Processing manual resume text... (Simulated)");
-    setTimeout(() => {
+    toast.info("Saving master resume...");
+    try {
+      await saveMasterResume(manualResumeText);
       const newProcessedExperience = simulateResumeParsing(manualResumeText);
       setProcessedExperience(newProcessedExperience);
       localStorage.setItem('processedExperience', JSON.stringify(newProcessedExperience));
 
       const summary = newProcessedExperience.map(entry => `- **${entry.title}** at ${entry.company}`).join('\n');
-      setMasterResumeSummary(`**Master Resume Processed from Manual Input:**\n${summary}\n\n(Details available via "View Master Resume Details")`);
+      setMasterResumeSummary(`**Master Resume Saved:**\n${summary}\n\n(Details available via "View Master Resume Details")`);
       setFileName(null);
-
+      toast.success("Master resume saved successfully!");
+    } catch (error) {
+      toast.error("Failed to save master resume. Please try again.");
+    } finally {
       setIsProcessing(false);
-      toast.success("Master resume saved and structured from manual input! Review the summary below.");
-    }, 2000);
+    }
   };
 
   const handleContinueToTagging = () => {
-    if (processedExperience.length === 0) {
+    if (isResumeProcessed || processedExperience.length > 0) {
+      navigate("/tagging");
+    } else {
       toast.error("Please upload, process, or manually save a master resume first.");
-      return;
     }
-    navigate("/tagging");
   };
 
   const handleVoiceCaptureClick = () => {
@@ -261,6 +302,16 @@ const MasterResumePage = () => {
       navigate("/pricing");
     } else {
       navigate("/voice-capture");
+    }
+  };
+
+  const handleViewMasterResume = async () => {
+    try {
+      const resume = await getMasterResume();
+      setManualResumeText(resume.content.raw);
+      toast.success("Master resume loaded.");
+    } catch (error) {
+      toast.error("Failed to load master resume.");
     }
   };
 
@@ -374,7 +425,7 @@ const MasterResumePage = () => {
                   <p className="text-sm text-muted-foreground whitespace-pre-wrap mt-3" dangerouslySetInnerHTML={{ __html: masterResumeSummary }}></p>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-4 mt-4">
-                  <Button className="flex-1 py-2 text-lg font-semibold shadow-md hover:shadow-lg transition-shadow" variant="outline" onClick={() => setShowMasterResumeDetails(true)}>
+                  <Button className="flex-1 py-2 text-lg font-semibold shadow-md hover:shadow-lg transition-shadow" variant="outline" onClick={handleViewMasterResume}>
                     <Eye className="h-5 w-5 mr-2" /> View Master Resume Details
                   </Button>
                   <Button className="flex-1 py-2 text-lg font-semibold shadow-md hover:shadow-lg transition-shadow" onClick={handleContinueToTagging}>
@@ -402,8 +453,8 @@ const MasterResumePage = () => {
                   <h4 className="font-semibold text-lg text-foreground">{entry.title} at {entry.company}</h4>
                   <p className="text-sm text-muted-foreground mt-2 leading-relaxed">{entry.description}</p>
                   <div className="mt-3 flex flex-wrap gap-2">
-                    <Badge variant="secondary" className="px-3 py-1 text-xs">Roles: {entry.functionalRoles.join(", ")}</Badge>
-                    <Badge variant="secondary" className="px-3 py-1 text-xs">Domains: {entry.industryDomains.join(", ")}</Badge>
+                    <Badge variant="secondary" className="px-3 py-1 text-xs">Roles: {(entry.functionalRoles ?? []).join(", ")}</Badge>
+                    <Badge variant="secondary" className="px-3 py-1 text-xs">Domains: {(entry.industryDomains ?? []).join(", ")}</Badge>
                   </div>
                 </div>
               ))

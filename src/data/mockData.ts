@@ -22,8 +22,9 @@ export interface ApplicationVersion {
   contentHash: string;
   templateUsed: string;
   hasUnsyncedChanges?: boolean;
-  simulatedResumeContent: string;
-  simulatedCoverLetterContent: string;
+  content: {
+    raw: string;
+  };
 }
 
 export interface SimulatedChange {
@@ -84,7 +85,8 @@ export const mockApplicationVersions: ApplicationVersion[] = [
     masterLastSynced: "2023-10-26, 10:00 AM",
     contentHash: "abc1",
     templateUsed: "modern",
-    simulatedResumeContent: `
+    content: {
+      raw: `
 **John Doe**
 john.doe@example.com | (555) 123-4567 | LinkedIn.com/in/johndoe
 
@@ -103,20 +105,7 @@ Highly accomplished Product Manager with a proven track record in Fintech and 3 
 
 **Skills:** Product Management, Team Leadership, SaaS Product Development, Fintech, SaaS, Program Management, Project Management, Agile Leadership, Education, EdTech, product strategy, roadmap development, user stories, agile methodologies.
 `,
-    simulatedCoverLetterContent: `
-Dear Hiring Manager,
-
-I am writing to express my enthusiastic interest in the Product Manager position at InnovateX Solutions, as advertised on LinkedIn. With a proven track record in leading cross-functional teams (5 engineers, 2 designers) to develop and launch new SaaS products in the fintech space. Increased user engagement by 20% and revenue by 15% within 6 months. Defined product strategy, managed roadmap, and oversaw entire product lifecycle., I am confident in my ability to contribute significantly to your team.
-
-During my tenure as a Senior Product Manager at InnovateX Solutions, I successfully led the development and launch of several products within the Fintech sector. My responsibilities included defining product strategy, managing the entire product lifecycle, and collaborating closely with engineering, design, and marketing teams to ensure successful market entry and adoption. For example, I spearheaded a project that resulted in a 20% increase in user engagement and a 15% growth in revenue for the division.
-
-I am particularly drawn to InnovateX Solutions' innovative approach to product development and believe my expertise in product strategy aligns perfectly with the requirements of this role. My ability to translate complex business requirements into actionable product roadmaps and drive cross-functional teams to achieve ambitious goals would be a valuable asset.
-
-Thank you for your time and consideration. I have attached my resume for your review and welcome the opportunity to discuss how my skills and experience align with your needs in more detail.
-
-Sincerely,
-John Doe
-`,
+    },
   },
   {
     id: "v2",
@@ -127,7 +116,8 @@ John Doe
     contentHash: "def2",
     templateUsed: "simple",
     hasUnsyncedChanges: true,
-    simulatedResumeContent: `
+    content: {
+      raw: `
 **John Doe**
 john.doe@example.com | (555) 123-4567 | LinkedIn.com/in/johndoe
 
@@ -146,20 +136,7 @@ Highly accomplished Program Manager with a proven track record in Education and 
 
 **Skills:** Program Management, Project Management, Agile Leadership, Education, EdTech, Product Management, Team Leadership, SaaS Product Development, Fintech, SaaS, project planning, stakeholder management, risk mitigation, cross-functional collaboration.
 `,
-    simulatedCoverLetterContent: `
-Dear Hiring Manager,
-
-I am writing to express my enthusiastic interest in the Program Manager position at Google, as advertised on LinkedIn. With a proven track record in managing large-scale educational technology projects, ensuring on-time and on-budget delivery for a portfolio of 5 projects with a combined budget of $2M. Implemented agile methodologies, improving project completion rates by 25%., I am confident in my ability to contribute significantly to your team.
-
-During my tenure as a Program Manager at EduTech Global, I successfully led the development and launch of several products within the Education sector. My responsibilities included defining product strategy, managing the entire product lifecycle, and collaborating closely with engineering, design, and marketing teams to ensure successful market entry and adoption. For example, I spearheaded a project that resulted in a 20% increase in user engagement and a 15% growth in revenue for the division.
-
-I am particularly drawn to Google's innovative approach to project management and believe my expertise in project planning aligns perfectly with the requirements of this role. My ability to translate complex business requirements into actionable product roadmaps and drive cross-functional teams to achieve ambitious goals would be a valuable asset.
-
-Thank you for your time and consideration. I have attached my resume for your review and welcome the opportunity to discuss how my skills and experience align with your needs in more detail.
-
-Sincerely,
-John Doe
-`,
+    },
   },
 ];
 

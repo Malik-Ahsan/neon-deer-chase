@@ -8,6 +8,8 @@ interface User {
   username: string;
   email: string;
   subscriptionTier: string;
+  generationsLeft: number;
+  access_token?: string;
 }
 
 interface AuthContextType {
@@ -18,6 +20,8 @@ interface AuthContextType {
   register: (userData: any) => Promise<void>;
   logout: () => void;
   upgradeTier: (tier: string) => void;
+  canGenerateResume: () => boolean;
+  recordResumeGeneration: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -28,10 +32,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
+    const token = authService.getToken();
     const currentUser = authService.getCurrentUser();
-    if (currentUser) {
-      // You might want to verify the token with the backend here
-      setUser({ username: currentUser.username, email: currentUser.email, subscriptionTier: currentUser.subscriptionTier || 'free' });
+    if (token && currentUser) {
+      setUser({
+        ...currentUser,
+        access_token: token,
+        generationsLeft: currentUser.generationsLeft ?? 5,
+      });
       setIsAuthenticated(true);
     }
     setIsLoading(false);
@@ -41,9 +49,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const data = await authService.login(userData);
       const { user } = data;
-      const userWithTier = { ...user, subscriptionTier: user.subscriptionTier || 'free' };
-      setUser(userWithTier);
-      authService.setCurrentUser(userWithTier);
+      const token = authService.getToken();
+      if (token) {
+        const userWithToken = { ...user, access_token: token, subscriptionTier: user.subscriptionTier, generationsLeft: user.generationsLeft ?? 5 };
+        setUser(userWithToken);
+        authService.setCurrentUser(userWithToken);
+      }
       setIsAuthenticated(true);
       toast.success(`Welcome back, ${user.username}!`);
     } catch (error) {
@@ -78,8 +89,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const canGenerateResume = () => {
+    if (!user) return false;
+    if (user.subscriptionTier === 'pro' || user.subscriptionTier === 'proplus') {
+      return true;
+    }
+    return user.generationsLeft > 0;
+  };
+
+  const recordResumeGeneration = () => {
+    if (user && user.subscriptionTier === 'free') {
+      const newGenerationsLeft = user.generationsLeft - 1;
+      const updatedUser = { ...user, generationsLeft: newGenerationsLeft };
+      setUser(updatedUser);
+      authService.setCurrentUser(updatedUser);
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, isLoading, login, register, logout, upgradeTier }}>
+    <AuthContext.Provider value={{ isAuthenticated, user, isLoading, login, register, logout, upgradeTier, canGenerateResume, recordResumeGeneration }}>
       {children}
     </AuthContext.Provider>
   );

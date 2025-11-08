@@ -17,7 +17,7 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 const Navbar = () => {
-  const { isAuthenticated, user, logout, upgradeTier } = useAuth();
+  const { isAuthenticated, user, logout } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -25,10 +25,6 @@ const Navbar = () => {
     navigate("/login");
   };
 
-  const handleUpgrade = () => {
-    upgradeTier('pro');
-    navigate("/pricing");
-  };
 
   return (
     <nav className="bg-primary text-primary-foreground p-4 shadow-lg">
@@ -77,9 +73,9 @@ const Navbar = () => {
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col space-y-1">
                     <p className="text-sm font-medium leading-none">{user?.username}</p>
-                    <p className="text-xs leading-none text-muted-foreground">
-                      Plan: <Badge variant="secondary" className="ml-1">{user?.subscriptionTier.toUpperCase()}</Badge>
-                    </p>
+                    <div className="text-xs leading-none text-muted-foreground">
+                      Plan: <Badge variant="secondary" className="ml-1">{user?.subscriptionTier?.toUpperCase()}</Badge>
+                    </div>
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
@@ -88,7 +84,7 @@ const Navbar = () => {
                   Dashboard
                 </DropdownMenuItem>
                 {user?.subscriptionTier === 'free' && (
-                  <DropdownMenuItem onClick={handleUpgrade} className="text-primary font-medium">
+                  <DropdownMenuItem onClick={() => navigate("/pricing")} className="text-primary font-medium">
                     <DollarSign className="mr-2 h-4 w-4" />
                     Upgrade to Pro
                   </DropdownMenuItem>

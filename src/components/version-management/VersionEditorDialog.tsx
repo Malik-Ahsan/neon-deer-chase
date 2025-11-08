@@ -23,8 +23,9 @@ interface ApplicationVersion {
   contentHash: string;
   templateUsed: string;
   hasUnsyncedChanges?: boolean;
-  simulatedResumeContent: string;
-  simulatedCoverLetterContent: string;
+  content: {
+    raw: string;
+  };
 }
 
 interface VersionEditorDialogProps {
@@ -33,8 +34,6 @@ interface VersionEditorDialogProps {
   version: ApplicationVersion | null;
   editingResumeContent: string;
   setEditingResumeContent: React.Dispatch<React.SetStateAction<string>>;
-  editingCoverLetterContent: string;
-  setEditingCoverLetterContent: React.Dispatch<React.SetStateAction<string>>;
   onSaveEdits: () => void;
 }
 
@@ -44,8 +43,6 @@ const VersionEditorDialog: React.FC<VersionEditorDialogProps> = ({
   version,
   editingResumeContent,
   setEditingResumeContent,
-  editingCoverLetterContent,
-  setEditingCoverLetterContent,
   onSaveEdits,
 }) => {
   if (!version) return null;
@@ -66,16 +63,6 @@ const VersionEditorDialog: React.FC<VersionEditorDialogProps> = ({
               id="edit-resume-content"
               value={editingResumeContent}
               onChange={(e) => setEditingResumeContent(e.target.value)}
-              rows={15}
-              className="font-mono text-sm resize-y h-auto min-h-[200px] border-border p-3 rounded-md bg-background"
-            />
-          </div>
-          <div>
-            <Label htmlFor="edit-cover-letter-content" className="text-xl font-semibold mb-3 block text-foreground">Cover Letter Content</Label>
-            <Textarea
-              id="edit-cover-letter-content"
-              value={editingCoverLetterContent}
-              onChange={(e) => setEditingCoverLetterContent(e.target.value)}
               rows={15}
               className="font-mono text-sm resize-y h-auto min-h-[200px] border-border p-3 rounded-md bg-background"
             />

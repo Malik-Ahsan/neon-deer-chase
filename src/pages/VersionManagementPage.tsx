@@ -16,8 +16,8 @@ import UpdateMasterPromptDialog from "@/components/version-management/UpdateMast
 import ContentViewerDialog from "@/components/version-management/ContentViewerDialog";
 import VersionEditorDialog from "@/components/version-management/VersionEditorDialog";
 
+import { getResumeVersions, updateResumeVersion, syncResumeVersion } from "@/services/resumeService";
 import {
-  mockApplicationVersions,
   simulatedMasterChanges,
   simulatedVersionChanges,
   ApplicationVersion,
@@ -38,27 +38,23 @@ const VersionManagementSection = () => {
 
   const [showVersionEditor, setShowVersionEditor] = useState<boolean>(false);
   const [editingResumeContent, setEditingResumeContent] = useState<string>("");
-  const [editingCoverLetterContent, setEditingCoverLetterContent] = useState<string>("");
 
   const navigate = useNavigate();
   const { canGenerateResume, recordResumeGeneration } = useAuth();
 
   useEffect(() => {
-    const storedVersions = localStorage.getItem("resumePivotVersions");
-    if (storedVersions) {
-      setVersions(JSON.parse(storedVersions));
-    } else {
-      setVersions(mockApplicationVersions);
-    }
-    const storedMasterUpdate = localStorage.getItem("masterResumeLastUpdated");
-    if (storedMasterUpdate) {
-      setMasterResumeLastUpdated(storedMasterUpdate);
-    }
-  }, []);
+    const fetchVersions = async () => {
+      try {
+        const fetchedVersions = await getResumeVersions();
+        setVersions(fetchedVersions);
+      } catch (error) {
+        toast.error("Failed to fetch resume versions.");
+        console.error(error);
+      }
+    };
 
-  useEffect(() => {
-    localStorage.setItem("resumePivotVersions", JSON.stringify(versions));
-  }, [versions]);
+    fetchVersions();
+  }, []);
 
   useEffect(() => {
     localStorage.setItem("masterResumeLastUpdated", masterResumeLastUpdated);
@@ -90,96 +86,52 @@ const VersionManagementSection = () => {
     setShowReviewDialog(true);
   };
 
-  const handleApplyMasterUpdate = () => {
+  const handleApplyMasterUpdate = async () => {
     if (currentVersionToUpdate) {
-      let updatedResumeContent = currentVersionToUpdate.simulatedResumeContent;
-      let updatedCoverLetterContent = currentVersionToUpdate.simulatedCoverLetterContent;
-
-      selectedMasterChanges.forEach(changeId => {
-        switch (changeId) {
-          case "exp_update":
-            updatedResumeContent = updatedResumeContent.replace(
-              "Led cross-functional teams to develop and launch new SaaS products in the fintech space.",
-              "Spearheaded cross-functional teams to develop and launch new SaaS products, achieving 15% market share growth."
-            );
-            updatedCoverLetterContent = updatedCoverLetterContent.replace(
-              "With a proven track record in Led cross-functional teams to develop and launch new SaaS products in the fintech space.",
-              "With a proven track record in spearheading SaaS product launches and achieving significant market share growth."
-            );
-            break;
-          case "skills_update":
-            updatedResumeContent = updatedResumeContent.replace(
-              "**Skills:** Product Management, Team Leadership, SaaS Product Development, Fintech, SaaS, Program Management, Project Management, Agile Leadership, Education, EdTech, product strategy, roadmap development, user stories, agile methodologies.",
-              "**Skills:** Product Management, Team Leadership, SaaS Product Development, Fintech, SaaS, AI Prompt Engineering, Program Management, Project Management, Agile Leadership, Education, EdTech, product strategy, roadmap development, user stories, agile methodologies."
-            );
-            updatedCoverLetterContent += "\n\n*Master Update: Added 'AI Prompt Engineering' to skills.*";
-            break;
-          case "contact_update":
-            updatedResumeContent = updatedResumeContent.replace(
-              "[Your Contact Info]",
-              "new.email@example.com | (555) 123-4567 | LinkedIn.com/in/yourname"
-            );
-            updatedCoverLetterContent = updatedCoverLetterContent.replace(
-              "[Your Contact Info]",
-              "new.email@example.com | (555) 123-4567 | LinkedIn.com/in/yourname"
-            );
-            break;
-          case "edu_update":
-            updatedResumeContent += "\n\n*Master Update: Updated MBA graduation date to 2025.*";
-            updatedCoverLetterContent += "\n\n*Master Update: Education section updated.*";
-            break;
-          default:
-            break;
-        }
-      });
-
-      setVersions(prevVersions =>
-        prevVersions.map(version =>
-          version.id === currentVersionToUpdate.id
-            ? {
-                ...version,
-                lastModified: new Date().toLocaleString(),
-                masterLastSynced: masterResumeLastUpdated,
-                contentHash: `updated-${Math.random().toFixed(4)}`,
-                hasUnsyncedChanges: false,
-                simulatedResumeContent: updatedResumeContent,
-                simulatedCoverLetterContent: updatedCoverLetterContent,
-              }
-            : version
-        )
-      );
-      toast.success(`Master update applied to version "${currentVersionToUpdate.name}".`);
-      setShowReviewDialog(false);
-      setCurrentVersionToUpdate(null);
-      setSelectedMasterChanges([]);
+      try {
+        await syncResumeVersion(currentVersionToUpdate.id);
+        const fetchedVersions = await getResumeVersions();
+        setVersions(fetchedVersions);
+        toast.success(`Master update applied to version "${currentVersionToUpdate.name}".`);
+        setShowReviewDialog(false);
+        setCurrentVersionToUpdate(null);
+        setSelectedMasterChanges([]);
+      } catch (error) {
+        toast.error("Failed to apply master update.");
+        console.error(error);
+      }
     }
   };
 
   const handleEditVersion = (version: ApplicationVersion) => {
     setCurrentVersionBeingEdited(version);
-    setEditingResumeContent(version.simulatedResumeContent);
-    setEditingCoverLetterContent(version.simulatedCoverLetterContent);
+    setEditingResumeContent(version.content.raw);
     setShowVersionEditor(true);
   };
 
-  const handleSaveVersionEdits = () => {
+  const handleSaveVersionEdits = async () => {
     if (currentVersionBeingEdited) {
-      setVersions(prevVersions =>
-        prevVersions.map(v =>
-          v.id === currentVersionBeingEdited.id
-            ? {
-                ...v,
-                simulatedResumeContent: editingResumeContent,
-                simulatedCoverLetterContent: editingCoverLetterContent,
-                hasUnsyncedChanges: true,
-                lastModified: new Date().toLocaleString(),
-              }
-            : v
-        )
-      );
-      toast.success(`Changes saved for "${currentVersionBeingEdited.name}".`);
-      setShowVersionEditor(false);
-      setShowEditPromptDialog(true);
+      try {
+        await updateResumeVersion(currentVersionBeingEdited.id, editingResumeContent);
+        setVersions(prevVersions =>
+          prevVersions.map(v =>
+            v.id === currentVersionBeingEdited.id
+              ? {
+                  ...v,
+                  content: { raw: editingResumeContent },
+                  hasUnsyncedChanges: true,
+                  lastModified: new Date().toLocaleString(),
+                }
+              : v
+          )
+        );
+        toast.success(`Changes saved for "${currentVersionBeingEdited.name}".`);
+        setShowVersionEditor(false);
+        setShowEditPromptDialog(true);
+      } catch (error) {
+        toast.error("Failed to save changes.");
+        console.error(error);
+      }
     }
   };
 
@@ -213,8 +165,8 @@ const VersionManagementSection = () => {
   const handleViewContent = (version: ApplicationVersion) => {
     setContentToView({
       name: version.name,
-      resume: version.simulatedResumeContent,
-      coverLetter: version.simulatedCoverLetterContent,
+      resume: version.content.raw,
+      coverLetter: "Cover letter viewing is not implemented for backend versions yet.",
     });
     setShowContentViewer(true);
   };
@@ -337,8 +289,6 @@ const VersionManagementSection = () => {
             version={currentVersionBeingEdited}
             editingResumeContent={editingResumeContent}
             setEditingResumeContent={setEditingResumeContent}
-            editingCoverLetterContent={editingCoverLetterContent}
-            setEditingCoverLetterContent={setEditingCoverLetterContent}
             onSaveEdits={handleSaveVersionEdits}
           />
         </Card>
