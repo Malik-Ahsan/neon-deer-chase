@@ -2,5 +2,6 @@ services:
   - type: web
     name: frontend
     env: static
-    buildCommand: cd frontend && npm install && npm run build
+    rootDir: .
+    buildCommand: npm install && npm run build
     staticPublishPath: ./dist
